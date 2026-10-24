@@ -1,0 +1,86 @@
+# Todos — guide pour les agents IA
+
+> Todos (https://todos.jeremy-laviole.fr/) crée des listes à cocher pour un
+> évènement : une liste par personne ou par groupe, plus une liste « Tout le
+> monde ». Tout se passe dans le navigateur : pas de compte, pas de serveur,
+> pas d'API HTTP. Un agent pilote l'app de deux façons : en donnant un lien
+> qui contient la liste, ou en appelant `window.todos` dans la page.
+
+## 1. Donner un lien (assistants de conversation)
+
+Écrivez la liste au format texte ci-dessous, encodez-la avec
+`encodeURIComponent`, et donnez le lien :
+
+    https://todos.jeremy-laviole.fr/#liste=<texte encodé>
+
+À l'ouverture, l'évènement est enregistré dans le navigateur de la personne
+et affiché. `?liste=<texte>` marche aussi. Donnez aussi le texte brut : il
+peut être collé dans l'app (champ « Les listes » ou bouton « ✍️ Texte »).
+
+Exemple (court) :
+
+    https://todos.jeremy-laviole.fr/#liste=%23%20%F0%9F%A7%B3%20Week-end%0A%40theme%20voyage%0AParents%20%3A%20Lit%20b%C3%A9b%C3%A9%2C%20tapis%0ALily%20%3A%20Sac%20avec%20doudou
+
+## 2. Format texte
+
+    # 🧳 Week-end chez Mamie
+    @theme voyage
+    @date 2026-11-14
+
+    Tout le monde :
+    - Pique-nique
+    Parents :
+    - Lit bébé
+    - [x] Tapis
+    Achille 🦁 : Sac avec doudou, pyjama
+    Enfants : 3 jeux de société et 4 livres chacun
+
+Règles :
+
+- `# …` : nom de l'évènement, avec un emoji facultatif au début.
+- `@theme` : fete, voyage, plage, nature, hiver ou douceur (alias acceptés :
+  noel, ski, camping, anniversaire, bebe, vacances, mer…).
+- `@date` : AAAA-MM-JJ (ou JJ/MM/AAAA).
+- `@id` : présent dans les liens partagés depuis l'app. Gardez-le pour
+  mettre à jour la liste de la personne au lieu d'en créer une nouvelle.
+- `Nom :` (deux-points suivi d'un espace ou d'une fin de ligne) commence une
+  liste. Un emoji juste avant ou après le nom devient son avatar.
+- « Tout le monde », « Tous » ou « Commun » : la liste commune, affichée en premier.
+- Éléments séparés par des virgules, des points-virgules ou des lignes
+  (puces `-`, `*`, `1.` acceptées). `[x]` devant un élément le coche.
+- Tout peut tenir sur une ligne :
+  `Parents : lit bébé, tapis, Achille : sac avec doudou, Lily : sac avec doudou`
+- Les éléments sans liste vont dans « Tout le monde ».
+- Les lignes `Titre :`, `Thème :` et `Date :` remplissent l'en-tête.
+
+## 3. Piloter la page (agents qui contrôlent le navigateur)
+
+Ouvrez https://todos.jeremy-laviole.fr/ puis exécutez du JavaScript dans la
+page. `window.todos.help()` renvoie l'aide complète. Le premier argument est
+l'évènement (id ou titre, `null` = l'évènement ouvert). Listes et éléments se
+désignent par leur nom ou texte, sans tenir compte des majuscules ni des
+accents ; un début de texte suffit pour un élément.
+
+    todos.create("# 🎂 Anniversaire de Lily\n@theme fete\nLily : gâteau")  // → id, ouvre l'évènement
+    todos.create({ title, emoji, theme, date, lists: [{ name, emoji, items: ["…"] }] })
+    todos.list()                                 // [{ id, title, done, total }]
+    todos.get(null)                              // évènement ouvert, complet
+    todos.addItems(null, "Lily", ["maillot", "crème solaire"])   // crée la liste si besoin
+    todos.check(null, "Parents", "lit bébé")     // coche ; false en 4e argument décoche
+    todos.addText(null, "Papi : canne, Mamie : tricot")
+    todos.update(null, { title: "Week-end à la mer", theme: "plage", date: "2026-07-14" })
+    todos.renameList(null, "Enfants", "Les petits")
+    todos.moveItem(null, "Parents", "tapis", "Tout le monde")
+    todos.removeItem(null, "Lily", "maillot")
+    todos.uncheckAll(null)
+    todos.shareUrl(null)                         // lien à envoyer
+    todos.toText(null)                           // texte complet
+
+Les erreurs sont des `Error` au message en français qui listent les noms
+possibles. La page n'ouvre jamais de boîte de dialogue du navigateur.
+
+## Données
+
+Les évènements sont dans `localStorage` (clé `todos:v1`) du navigateur
+utilisé. Rien n'est envoyé ailleurs ; un lien de partage contient toute la
+liste après le `#`.

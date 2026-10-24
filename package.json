@@ -1,0 +1,21 @@
+{
+  "name": "todos-fete",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "npx serve out",
+    "test": "node --test",
+    "format": "prettier --write app lib tests public/llms.txt package.json README.md"
+  },
+  "dependencies": {
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
+  }
+}
