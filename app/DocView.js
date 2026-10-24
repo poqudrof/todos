@@ -6,6 +6,8 @@ import * as store from "../lib/store.js";
 import { docToText, parseText, splitEmoji } from "../lib/format.js";
 import { shareUrl } from "../lib/link.js";
 import { getTheme } from "../lib/themes.js";
+import { backupJson } from "../lib/backup.js";
+import { docFileName, downloadJson } from "../lib/download.js";
 import ListCard from "./ListCard.js";
 import PrintPanel from "./PrintPanel.js";
 import {
@@ -136,6 +138,15 @@ export default function DocView({ doc, id, notify }) {
           </button>
           <button type="button" onClick={duplicate}>
             📄 Dupliquer
+          </button>
+          <button
+            type="button"
+            title="Exporter cette liste en JSON"
+            onClick={() =>
+              downloadJson(backupJson([doc]), docFileName(doc, "json"))
+            }
+          >
+            ⬇ JSON
           </button>
           {confirmDelete ? (
             <button

@@ -996,3 +996,11 @@ h2 .editable-input {
     transition: none !important;
   }
 }
+
+.foot p {
+  margin: 0 0 10px;
+}
+
+.backup {
+  justify-content: center;
+}

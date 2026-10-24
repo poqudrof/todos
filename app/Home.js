@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import * as model from "../lib/model.js";
 import * as store from "../lib/store.js";
 import { docFromText, parseText } from "../lib/format.js";
 import { textFromUrl } from "../lib/link.js";
 import { EXAMPLES } from "../lib/examples.js";
+import { backupFileName, backupJson, docsFromJson } from "../lib/backup.js";
+import { downloadJson } from "../lib/download.js";
 import { THEMES, getTheme } from "../lib/themes.js";
 import { DOC_EMOJIS, EmojiPicker, Garland } from "./ui.js";
 
@@ -28,6 +30,26 @@ export default function Home({ docs, notify }) {
   const [emoji, setEmoji] = useState("🏡");
   const [theme, setTheme] = useState("fete");
   const [text, setText] = useState("");
+
+  const fileInput = useRef(null);
+
+  // Lists already here (same id) are replaced by the imported version.
+  const importFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const imported = docsFromJson(await file.text());
+      for (const doc of [...imported].reverse()) store.saveDoc(doc);
+      notify(
+        imported.length === 1
+          ? `« ${imported[0].title} » importée.`
+          : `${imported.length} listes importées.`,
+      );
+    } catch (error) {
+      notify(error.message);
+    }
+  };
 
   const create = (e) => {
     e.preventDefault();
@@ -212,7 +234,35 @@ export default function Home({ docs, notify }) {
       </section>
 
       <footer className="foot">
-        Sans compte : vos listes restent dans ce navigateur.
+        <p>
+          Vos listes sont enregistrées automatiquement dans ce navigateur, sans
+          compte.
+        </p>
+        <div className="row backup">
+          {docs.length > 0 && (
+            <button
+              type="button"
+              className="small"
+              onClick={() => downloadJson(backupJson(docs), backupFileName())}
+            >
+              ⬇ Exporter mes listes (JSON)
+            </button>
+          )}
+          <button
+            type="button"
+            className="small"
+            onClick={() => fileInput.current?.click()}
+          >
+            ⬆ Importer un JSON
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={importFile}
+          />
+        </div>
       </footer>
     </main>
   );

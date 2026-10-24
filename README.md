@@ -2,7 +2,7 @@
 
 Des listes à imprimer et à afficher à la maison : une liste simple, ou une liste de listes (une par personne, par pièce, par rayon…). On choisit un décor, on règle la mise en page et on télécharge un PDF A4 soigné. Site : https://todos.jeremy-laviole.fr/
 
-Tout se passe dans le navigateur : pas de compte, pas de serveur. Les listes sont gardées dans le `localStorage` de l’appareil ; le bouton 🔗 Lien donne une adresse qui contient toute la liste (après le `#`).
+Tout se passe dans le navigateur : pas de compte, pas de serveur. Chaque modification est enregistrée automatiquement dans le `localStorage` de l’appareil. Pour garder une copie ou changer d’appareil : « Exporter mes listes (JSON) » en bas de l’accueil (ou ⬇ JSON sur une liste), puis « Importer un JSON » ; une liste déjà présente (même identifiant) est remplacée. Le bouton 🔗 Lien donne aussi une adresse qui contient toute la liste (après le `#`).
 
 ## Le PDF
 
@@ -60,7 +60,7 @@ npm run build   # site statique dans out/
 - `lib/model.js` : listes et réglages (fonctions pures).
 - `lib/format.js` : format texte. `lib/link.js` : liens de partage.
 - `lib/pdf.js` : mise en page et dessin du PDF (pdf-lib), navigateur et Node. `lib/pdf-browser.js` : polices et emojis côté navigateur.
-- `lib/store.js` : stockage local. `lib/examples.js` : exemples.
+- `lib/store.js` : stockage local. `lib/backup.js` : export et import JSON. `lib/examples.js` : exemples.
 - `app/` : interface Next.js (export statique).
 
 Polices : Fredoka et Nunito, licence SIL Open Font License, dans `public/fonts/`.
