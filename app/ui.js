@@ -1,35 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { personColor } from "../lib/themes.js";
 
-export const EVENT_EMOJIS = [
-  "🎉",
+export const DOC_EMOJIS = [
   "🧳",
   "🏖️",
   "⛺",
   "🎄",
   "🎂",
+  "🎉",
   "🍼",
-  "🏔️",
+  "🏡",
+  "🛒",
+  "☀️",
+  "🌙",
+  "📚",
+  "🧹",
+  "🍽️",
+  "🎒",
   "🚗",
   "✈️",
-  "🏡",
   "🎁",
   "🌸",
-  "☀️",
   "🎃",
-  "💍",
-  "🎓",
-  "🍕",
-  "🧺",
   "⚽",
-  "🎶",
+  "🎨",
   "🐣",
-  "🚲",
-  "⛵",
+  "📝",
 ];
-export const PERSON_EMOJIS = [
+export const LIST_EMOJIS = [
   "👩",
   "👨",
   "👶",
@@ -38,7 +37,7 @@ export const PERSON_EMOJIS = [
   "👦",
   "👵",
   "👴",
-  "👪",
+  "👨‍👩‍👧‍👦",
   "🐶",
   "🐱",
   "🦁",
@@ -48,12 +47,20 @@ export const PERSON_EMOJIS = [
   "🐼",
   "🐸",
   "🦄",
-  "🐯",
-  "🐨",
   "🌟",
   "🚀",
-  "🎨",
   "🧸",
+  "🥕",
+  "🧀",
+  "🍝",
+  "🥖",
+  "🧴",
+  "🎈",
+  "🍰",
+  "🎯",
+  "✉️",
+  "🧺",
+  "🛏️",
 ];
 
 // Text shown as plain text, turned into an input on click.
@@ -61,8 +68,8 @@ export function Editable({
   value,
   onSave,
   label,
+  placeholder = "",
   className = "",
-  multiline = false,
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -70,7 +77,7 @@ export function Editable({
   const commit = () => {
     setEditing(false);
     const text = draft.trim();
-    if (text && text !== value) onSave(text);
+    if (text !== value && (text || placeholder)) onSave(text);
   };
 
   if (editing) {
@@ -79,6 +86,7 @@ export function Editable({
         className={`editable-input ${className}`}
         value={draft}
         aria-label={label}
+        placeholder={placeholder}
         autoFocus
         onFocus={(e) => e.target.select()}
         onChange={(e) => setDraft(e.target.value)}
@@ -96,15 +104,15 @@ export function Editable({
   return (
     <button
       type="button"
-      className={`editable ${multiline ? "multiline" : ""} ${className}`}
+      className={`editable ${value ? "" : "empty"} ${className}`}
       title={label}
-      aria-label={`${label} : ${value}`}
+      aria-label={`${label} : ${value || placeholder}`}
       onClick={() => {
         setDraft(value);
         setEditing(true);
       }}
     >
-      {value}
+      {value || placeholder}
     </button>
   );
 }
@@ -135,6 +143,11 @@ export function EmojiPicker({
     };
   }, [open]);
 
+  const pick = (emoji) => {
+    onPick(emoji);
+    setOpen(false);
+  };
+
   return (
     <span className="picker" ref={box}>
       <button
@@ -156,23 +169,13 @@ export function EmojiPicker({
               role="option"
               aria-selected={emoji === value}
               className={emoji === value ? "on" : ""}
-              onClick={() => {
-                onPick(emoji);
-                setOpen(false);
-              }}
+              onClick={() => pick(emoji)}
             >
               {emoji}
             </button>
           ))}
           {allowNone && (
-            <button
-              type="button"
-              className="none"
-              onClick={() => {
-                onPick("");
-                setOpen(false);
-              }}
-            >
+            <button type="button" className="none" onClick={() => pick("")}>
               Aucun
             </button>
           )}
@@ -182,8 +185,7 @@ export function EmojiPicker({
   );
 }
 
-export function Avatar({ name, emoji, everyone, size = 44 }) {
-  const color = everyone ? "var(--accent)" : personColor(name);
+export function Avatar({ name, emoji, color, size = 40 }) {
   return (
     <span
       className={`avatar ${emoji ? "has-emoji" : ""}`}
@@ -195,22 +197,20 @@ export function Avatar({ name, emoji, everyone, size = 44 }) {
       }}
       aria-hidden="true"
     >
-      {emoji ||
-        (everyone ? "🌟" : (name || "?").trim().charAt(0).toUpperCase())}
+      {emoji || (name || "?").trim().charAt(0).toUpperCase()}
     </span>
   );
 }
 
-// Triangle flags hanging on a string.
+// Triangle flags hanging on a string, like on the PDF.
 export function Garland({ colors, count = 15 }) {
+  if (!colors) return <div className="garland plain" aria-hidden="true" />;
   const flags = Array.from({ length: count }, (_, i) => {
-    const x = i / (count - 1);
-    const sag = 4 * x * (1 - x);
-    const slope = (1 - 2 * x) * -14;
+    const x = (i + 0.5) / count;
     return {
       left: `${x * 100}%`,
-      top: `${sag * 30}px`,
-      rotate: slope,
+      top: `${2 + 4 * x * (1 - x) * 30}px`,
+      rotate: (1 - 2 * x) * -14,
       color: colors[i % colors.length],
     };
   });
@@ -221,7 +221,7 @@ export function Garland({ colors, count = 15 }) {
           d="M0 2 Q50 62 100 2"
           fill="none"
           stroke="currentColor"
-          strokeWidth="1.5"
+          strokeWidth="1.2"
           vectorEffect="non-scaling-stroke"
         />
       </svg>
@@ -242,70 +242,11 @@ export function Garland({ colors, count = 15 }) {
   );
 }
 
-const CONFETTI_COLORS = [
-  "#ff6b6b",
-  "#fcc419",
-  "#51cf66",
-  "#339af0",
-  "#cc5de8",
-  "#ff922b",
-];
-
-export function Confetti({ burst }) {
-  const [pieces, setPieces] = useState([]);
-  useEffect(() => {
-    if (!burst) return;
-    setPieces(
-      Array.from({ length: 22 }, (_, i) => ({
-        id: `${burst}-${i}`,
-        dx: Math.round((Math.random() - 0.5) * 260),
-        dy: Math.round(-60 - Math.random() * 140),
-        rot: Math.round(Math.random() * 720 - 360),
-        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-        delay: Math.random() * 0.12,
-      })),
-    );
-    const timer = setTimeout(() => setPieces([]), 1400);
-    return () => clearTimeout(timer);
-  }, [burst]);
-  return (
-    <span className="confetti" aria-hidden="true">
-      {pieces.map((p) => (
-        <span
-          key={p.id}
-          style={{
-            "--dx": `${p.dx}px`,
-            "--dy": `${p.dy}px`,
-            "--rot": `${p.rot}deg`,
-            background: p.color,
-            animationDelay: `${p.delay}s`,
-          }}
-        />
-      ))}
-    </span>
-  );
-}
-
-export function formatDate(date) {
-  if (!date) return "";
-  const day = new Date(`${date}T12:00:00`);
-  if (Number.isNaN(day.getTime())) return "";
-  return day.toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
-// "Aujourd'hui", "Demain", "Dans 5 jours"… or null once the day is past.
-export function countdown(date) {
-  if (!date) return null;
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
-  const days = Math.round((new Date(`${date}T12:00:00`) - today) / 86400000);
-  if (Number.isNaN(days) || days < 0) return null;
-  if (days === 0) return "C'est aujourd'hui !";
-  if (days === 1) return "C'est demain !";
-  return `J-${days}`;
+export function themeStyle(theme) {
+  return {
+    "--bg": theme.bg,
+    "--dot": theme.dot,
+    "--accent": theme.accent,
+    "--soft": theme.soft,
+  };
 }

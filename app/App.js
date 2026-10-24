@@ -8,21 +8,17 @@ import {
   useSyncExternalStore,
 } from "react";
 import * as store from "../lib/store.js";
-import { eventFromText } from "../lib/format.js";
-import { eventIdFromUrl, textFromUrl } from "../lib/link.js";
+import { docFromText } from "../lib/format.js";
+import { docIdFromUrl, textFromUrl } from "../lib/link.js";
 import { installAgentApi } from "../lib/agent.js";
 import Home from "./Home.js";
-import EventView from "./EventView.js";
+import DocView from "./DocView.js";
 
-const selectEvents = () => store.getSnapshot().events;
-const selectNoEvents = () => store.getServerSnapshot().events;
+const selectDocs = () => store.getSnapshot().docs;
+const selectNoDocs = () => store.getServerSnapshot().docs;
 
 export default function App() {
-  const events = useSyncExternalStore(
-    store.subscribe,
-    selectEvents,
-    selectNoEvents,
-  );
+  const docs = useSyncExternalStore(store.subscribe, selectDocs, selectNoDocs);
   const [route, setRoute] = useState({ ready: false, id: null });
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
@@ -36,31 +32,33 @@ export default function App() {
   useEffect(() => {
     installAgentApi();
 
-    // A shared link opens its list and keeps a copy on this device. A link
-    // made from an event already here replaces it (with an undo).
+    // A shared link opens its lists and keeps a copy on this device. A link
+    // made from a document already here replaces it (with an undo).
     const receive = (text) => {
-      const incoming = eventFromText(text);
-      const previous = store.getEvent(incoming.id);
+      const incoming = docFromText(text);
+      const previous = store.getDoc(incoming.id);
       if (previous) {
-        store.saveEvent({ ...incoming, createdAt: previous.createdAt });
+        store.saveDoc({ ...incoming, createdAt: previous.createdAt });
         notify("Liste mise à jour depuis le lien.", {
           label: "Annuler",
-          run: () => store.saveEvent(previous),
+          run: () => store.saveDoc(previous),
         });
       } else {
-        store.saveEvent(incoming);
-        notify("Liste ajoutée sur cet appareil 🎉");
+        store.saveDoc(incoming);
+        notify("Liste ajoutée sur cet appareil.");
       }
-      const path = window.location.pathname;
-      window.history.replaceState(null, "", `${path}#/${incoming.id}`);
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}#/${incoming.id}`,
+      );
       return incoming.id;
     };
 
     const sync = () => {
       const href = window.location.href;
       const text = textFromUrl(href);
-      const id = text ? receive(text) : eventIdFromUrl(href);
-      setRoute({ ready: true, id });
+      setRoute({ ready: true, id: text ? receive(text) : docIdFromUrl(href) });
       window.scrollTo(0, 0);
     };
     sync();
@@ -68,16 +66,16 @@ export default function App() {
     return () => window.removeEventListener("hashchange", sync);
   }, [notify]);
 
-  const event = route.id ? events.find((e) => e.id === route.id) : null;
+  const doc = route.id ? docs.find((d) => d.id === route.id) : null;
 
   return (
     <>
       {!route.ready ? (
         <div className="loading" aria-hidden="true" />
       ) : route.id ? (
-        <EventView event={event} id={route.id} notify={notify} />
+        <DocView doc={doc} id={route.id} notify={notify} />
       ) : (
-        <Home events={events} notify={notify} />
+        <Home docs={docs} notify={notify} />
       )}
       <div className="toast-zone" role="status" aria-live="polite">
         {toast && (

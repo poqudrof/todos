@@ -3,50 +3,58 @@
 import { useState } from "react";
 import * as model from "../lib/model.js";
 import * as store from "../lib/store.js";
-import { parseText } from "../lib/format.js";
+import { docFromText, parseText } from "../lib/format.js";
 import { textFromUrl } from "../lib/link.js";
+import { EXAMPLES } from "../lib/examples.js";
 import { THEMES, getTheme } from "../lib/themes.js";
-import AgentHelp from "./AgentHelp.js";
-import { EmojiPicker, EVENT_EMOJIS, Garland, countdown } from "./ui.js";
+import { DOC_EMOJIS, EmojiPicker, Garland } from "./ui.js";
 
-const EXAMPLE = `Parents : Lit bébé, tapis, habits, couches, trousse de toilette
+const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const PLACEHOLDER = `Parents : Lit bébé, tapis, habits, couches
 Achille 🦁 : Sac avec doudou
-Lily 🐰 : Sac avec doudou
-Enfants : 3 jeux de société et 4 livres chacun`;
+Lily 🐰 : Sac avec doudou`;
+const examples = EXAMPLES.map((example) => ({
+  ...example,
+  doc: docFromText(example.text),
+}));
 
-export default function Home({ events, notify }) {
+function open(doc) {
+  store.saveDoc(doc);
+  window.location.hash = `/${doc.id}`;
+}
+
+export default function Home({ docs, notify }) {
   const [title, setTitle] = useState("");
-  const [emoji, setEmoji] = useState("🧳");
-  const [theme, setTheme] = useState("voyage");
-  const [date, setDate] = useState("");
+  const [emoji, setEmoji] = useState("🏡");
+  const [theme, setTheme] = useState("fete");
   const [text, setText] = useState("");
 
   const create = (e) => {
     e.preventDefault();
-    // A link pasted from an assistant works as well as plain text.
+    // A share link pasted here works as well as plain text.
     const source = /^https?:\/\//.test(text.trim())
       ? textFromUrl(text.trim()) || ""
       : text;
     const parsed = parseText(source);
-    const event = model.createEvent({
-      ...parsed,
-      id: undefined,
-      title: title.trim() || parsed.title || "Mon évènement",
-      emoji: title.trim() ? emoji : parsed.emoji || emoji,
-      theme: parsed.theme && !title.trim() ? parsed.theme : theme,
-      date: date || parsed.date,
-    });
-    store.saveEvent(event);
-    window.location.hash = `/${event.id}`;
-    notify("Évènement créé ✨");
+    open(
+      model.createDoc({
+        ...parsed,
+        id: undefined,
+        title: title.trim() || parsed.title,
+        emoji: title.trim() ? emoji : parsed.emoji || emoji,
+        theme: parsed.theme || theme,
+      }),
+    );
+  };
+
+  const startFrom = (example) => {
+    open(docFromText(example.text));
+    notify("Exemple copié dans vos listes : modifiez-le à votre goût.");
   };
 
   return (
     <main className="home">
-      <Garland
-        colors={["#ff6b6b", "#fcc419", "#51cf66", "#339af0", "#cc5de8"]}
-        count={19}
-      />
+      <Garland colors={getTheme("fete").flags} count={19} />
       <header className="hero">
         <p className="brand">
           <span className="brand-icon" aria-hidden="true">
@@ -54,48 +62,32 @@ export default function Home({ events, notify }) {
           </span>{" "}
           Todos
         </p>
-        <h1>Qui apporte quoi&nbsp;?</h1>
+        <h1>De jolies listes à afficher</h1>
         <p className="lead">
-          Une liste à cocher pour chaque personne, une autre pour tout le monde.
-          Pour les valises, les fêtes, les week-ends. Sans compte : tout reste
-          dans votre navigateur, et un lien suffit pour partager.
+          Une liste, ou une liste par personne. Choisissez un décor et imprimez
+          un PDF soigné pour le frigo, l’entrée ou la chambre des enfants.
         </p>
       </header>
 
-      {events.length > 0 && (
-        <section className="mine" aria-label="Mes évènements">
-          <h2>Mes évènements</h2>
-          <div className="event-grid">
-            {events.map((event) => {
-              const t = getTheme(event.theme);
-              const { done, total } = model.progress(event);
-              const soon = countdown(event.date);
+      {docs.length > 0 && (
+        <section className="block" aria-label="Mes listes">
+          <h2>Mes listes</h2>
+          <div className="doc-grid">
+            {docs.map((doc) => {
+              const t = getTheme(doc.theme);
               return (
                 <a
-                  key={event.id}
-                  href={`#/${event.id}`}
-                  className="event-tile"
-                  style={{
-                    "--bg": t.bg,
-                    "--accent": t.accent,
-                    "--dot": t.dot,
-                    "--soft": t.soft,
-                  }}
+                  key={doc.id}
+                  href={`#/${doc.id}`}
+                  className="doc-tile"
+                  style={{ "--bg": t.bg, "--accent": t.accent }}
                 >
                   <span className="tile-emoji" aria-hidden="true">
-                    {event.emoji || t.emoji}
+                    {doc.emoji || t.emoji}
                   </span>
-                  <span className="tile-title">{event.title}</span>
+                  <span className="tile-title">{doc.title}</span>
                   <span className="tile-meta">
-                    {event.lists.length} liste
-                    {event.lists.length > 1 ? "s" : ""}
-                    {total > 0 && ` · ${done}/${total}`}
-                    {soon && ` · ${soon}`}
-                  </span>
-                  <span className="bar" aria-hidden="true">
-                    <span
-                      style={{ width: `${total ? (done / total) * 100 : 0}%` }}
-                    />
+                    {doc.lists.map((l) => l.name).join(" · ") || "Vide"}
                   </span>
                 </a>
               );
@@ -104,31 +96,81 @@ export default function Home({ events, notify }) {
         </section>
       )}
 
-      <section className="create card" aria-label="Nouvel évènement">
-        <h2>Nouvel évènement</h2>
+      <section className="block" aria-label="Exemples">
+        <h2>Exemples</h2>
+        <p className="muted">
+          Téléchargez-les tels quels, ou partez de l’un d’eux.
+        </p>
+        <div className="examples">
+          {examples.map((example) => {
+            const t = getTheme(example.doc.theme);
+            return (
+              <article
+                key={example.slug}
+                className="example"
+                style={{ "--bg": t.bg, "--accent": t.accent }}
+              >
+                <a
+                  href={`${base}/exemples/${example.slug}.pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`thumb ${example.doc.pdf.orientation}`}
+                >
+                  <img
+                    src={`${base}/exemples/${example.slug}.png`}
+                    alt={`Aperçu du PDF « ${example.doc.title} »`}
+                    loading="lazy"
+                  />
+                </a>
+                <div className="example-body">
+                  <h3>
+                    {example.doc.emoji} {example.doc.title}
+                  </h3>
+                  <p className="muted">
+                    {example.doc.lists.map((l) => l.name).join(" · ")}
+                  </p>
+                  <div className="row">
+                    <button
+                      type="button"
+                      className="primary small"
+                      onClick={() => startFrom(example)}
+                    >
+                      Modifier
+                    </button>
+                    <a
+                      className="button small"
+                      href={`${base}/exemples/${example.slug}.pdf`}
+                      download
+                    >
+                      PDF
+                    </a>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="block card create" aria-label="Nouvelle liste">
+        <h2>Nouvelle liste</h2>
         <form onSubmit={create}>
           <div className="title-row">
             <EmojiPicker
               value={emoji}
-              choices={EVENT_EMOJIS}
-              label="Emoji de l’évènement"
-              onPick={(e) => setEmoji(e || "🎉")}
+              choices={DOC_EMOJIS}
+              label="Emoji du titre"
+              onPick={(e) => setEmoji(e || "🏡")}
               allowNone={false}
             >
-              <span className="event-emoji small">{emoji}</span>
+              <span className="doc-emoji small">{emoji}</span>
             </EmojiPicker>
             <input
               className="big"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Nom de l’évènement (Week-end chez Mamie…)"
-              aria-label="Nom de l’évènement"
-            />
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              aria-label="Date (facultatif)"
+              placeholder="Titre (Week-end chez Mamie, Courses…)"
+              aria-label="Titre"
             />
           </div>
           <div className="themes" role="radiogroup" aria-label="Décor">
@@ -140,10 +182,7 @@ export default function Home({ events, notify }) {
                 aria-checked={t.id === theme}
                 className={t.id === theme ? "on" : ""}
                 style={{ "--chip": t.bg, "--chip-accent": t.accent }}
-                onClick={() => {
-                  setTheme(t.id);
-                  setEmoji(t.emoji);
-                }}
+                onClick={() => setTheme(t.id)}
               >
                 {t.emoji} {t.label}
               </button>
@@ -151,44 +190,29 @@ export default function Home({ events, notify }) {
           </div>
           <label className="field">
             <span>
-              Les listes{" "}
+              Le contenu{" "}
               <span className="muted">
-                — facultatif, une ligne par personne, ou collez la réponse d’une
-                IA
+                — facultatif : une ligne « Nom : élément, élément » par liste
               </span>
             </span>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              rows={6}
-              placeholder={EXAMPLE}
+              rows={4}
+              placeholder={PLACEHOLDER}
               spellCheck={false}
             />
           </label>
           <div className="row">
             <button type="submit" className="primary">
-              Créer l’évènement
+              Créer
             </button>
-            {!text && (
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => setText(EXAMPLE)}
-              >
-                Essayer avec l’exemple
-              </button>
-            )}
           </div>
         </form>
       </section>
 
-      <section className="card">
-        <AgentHelp notify={notify} />
-      </section>
-
       <footer className="foot">
-        Les listes sont enregistrées dans ce navigateur uniquement. Pour les
-        retrouver ailleurs, utilisez 🔗 Partager.
+        Sans compte : vos listes restent dans ce navigateur.
       </footer>
     </main>
   );

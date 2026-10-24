@@ -2,56 +2,59 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   parseText,
-  eventFromText,
-  eventToText,
+  docFromText,
+  docToText,
   splitEmoji,
 } from "../lib/format.js";
-import { textFromUrl, shareUrl, eventIdFromUrl } from "../lib/link.js";
+import { textFromUrl, shareUrl, docIdFromUrl } from "../lib/link.js";
 
 const names = (parsed) => parsed.lists.map((list) => list.name);
-const texts = (list) => list.items.map((item) => item.text);
 
 test("parses the one-line example", () => {
   const parsed = parseText(
     "Parents :   Lit bébé, tapis, habits, couches, trousse toilettes,  Achille :  Sac avec doudou, Lily : sac avec doudou, Enfants : 3 jeux de société et 4 livres chacun.",
   );
   assert.deepEqual(names(parsed), ["Parents", "Achille", "Lily", "Enfants"]);
-  assert.deepEqual(texts(parsed.lists[0]), [
+  assert.deepEqual(parsed.lists[0].items, [
     "Lit bébé",
     "tapis",
     "habits",
     "couches",
     "trousse toilettes",
   ]);
-  assert.deepEqual(texts(parsed.lists[1]), ["Sac avec doudou"]);
-  assert.deepEqual(texts(parsed.lists[3]), [
+  assert.deepEqual(parsed.lists[3].items, [
     "3 jeux de société et 4 livres chacun",
   ]);
 });
 
-test("parses headers, bullets, check boxes and emojis", () => {
+test("parses title, subtitle, PDF settings, bullets and emojis", () => {
   const parsed = parseText(`# 🧳 Week-end chez Mamie
+## Ce qu'on emporte
 @theme vacances
-@date 14/11/2026
+@pages chacun
+@orientation paysage
+@lignes 3
+@cases rondes
 
 Achille 🦁 :
 - Sac avec doudou
-- [x] Pyjama
+- [ ] Pyjama
 1. Bottes
-
 Tout le monde : pique-nique`);
   assert.equal(parsed.title, "Week-end chez Mamie");
   assert.equal(parsed.emoji, "🧳");
+  assert.equal(parsed.subtitle, "Ce qu'on emporte");
   assert.equal(parsed.theme, "voyage");
-  assert.equal(parsed.date, "2026-11-14");
+  assert.deepEqual(parsed.pdf, {
+    layout: "chacun",
+    orientation: "paysage",
+    blankLines: 3,
+    boxes: "rondes",
+  });
   assert.deepEqual(parsed.lists[0], {
     name: "Achille",
     emoji: "🦁",
-    items: [
-      { text: "Sac avec doudou", done: false },
-      { text: "Pyjama", done: true },
-      { text: "Bottes", done: false },
-    ],
+    items: ["Sac avec doudou", "Pyjama", "Bottes"],
   });
   assert.equal(parsed.lists[1].name, "Tout le monde");
 });
@@ -69,18 +72,12 @@ test("labels like Titre or Thème fill the header", () => {
 test("items without a label go to everyone, times are not labels", () => {
   const parsed = parseText("Gâteau, bougies\nRDV 10:30, http://exemple.fr");
   assert.deepEqual(names(parsed), ["Tout le monde"]);
-  assert.deepEqual(texts(parsed.lists[0]), [
+  assert.deepEqual(parsed.lists[0].items, [
     "Gâteau",
     "bougies",
     "RDV 10:30",
     "http://exemple.fr",
   ]);
-});
-
-test("a list named twice is merged", () => {
-  const parsed = parseText("Lily : doudou\nLily : pyjama");
-  assert.equal(parsed.lists.length, 1);
-  assert.deepEqual(texts(parsed.lists[0]), ["doudou", "pyjama"]);
 });
 
 test("splits an emoji from a name", () => {
@@ -90,43 +87,33 @@ test("splits an emoji from a name", () => {
 });
 
 test("text round trip keeps everything", () => {
-  const event = eventFromText(
-    "# 🎄 Noël\n@theme noel\nTous : sapin\nAchille 🦁 : [x] luge, gants",
+  const doc = docFromText(
+    "# 🎄 Noël\n## Chez Papi\n@theme noel\n@pages les-deux\n@lignes 2\nTous : sapin\nAchille 🦁 : luge, gants",
   );
-  const again = eventFromText(eventToText(event));
-  assert.equal(again.id, event.id);
-  assert.equal(again.title, "Noël");
+  const again = docFromText(docToText(doc));
+  assert.equal(again.id, doc.id);
+  assert.equal(again.subtitle, "Chez Papi");
   assert.equal(again.theme, "hiver");
+  assert.deepEqual(again.pdf, doc.pdf);
   assert.deepEqual(
-    again.lists.map((l) => [
-      l.name,
-      l.emoji,
-      l.items.map((i) => [i.text, i.done]),
-    ]),
+    again.lists.map((l) => [l.name, l.emoji, l.items.map((i) => i.text)]),
     [
-      ["Tous", "", [["sapin", false]]],
-      [
-        "Achille",
-        "🦁",
-        [
-          ["luge", true],
-          ["gants", false],
-        ],
-      ],
+      ["Tous", "", ["sapin"]],
+      ["Achille", "🦁", ["luge", "gants"]],
     ],
   );
 });
 
 test("links carry the text in the hash or the query", () => {
-  const event = eventFromText("# Fête\nLily : ballons, gâteau");
-  const url = shareUrl(event, "https://todos.example/");
+  const doc = docFromText("# Fête\nLily : ballons, gâteau");
+  const url = shareUrl(doc, "https://todos.example/");
   assert.ok(url.startsWith("https://todos.example/#liste="));
-  assert.equal(textFromUrl(url), eventToText(event));
+  assert.equal(textFromUrl(url), docToText(doc));
   assert.equal(
     textFromUrl("https://x/?liste=Lily+%3A+doudou"),
     "Lily : doudou",
   );
   assert.equal(textFromUrl("https://x/#list=Lily : doudou"), "Lily : doudou");
   assert.equal(textFromUrl("https://x/#/abc"), null);
-  assert.equal(eventIdFromUrl("https://x/#/abc123"), "abc123");
+  assert.equal(docIdFromUrl("https://x/#/abc123"), "abc123");
 });

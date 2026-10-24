@@ -1,95 +1,89 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  createEvent,
-  addItems,
-  addList,
-  toggleItem,
-  removeItem,
-  moveItem,
-  updateList,
-  uncheckAll,
-  mergeInto,
-  progress,
-  sortedLists,
-  findList,
-} from "../lib/model.js";
+import * as m from "../lib/model.js";
 import { parseText } from "../lib/format.js";
+import { getTheme } from "../lib/themes.js";
 
 const base = () =>
-  createEvent({
+  m.createDoc({
     title: "Week-end",
     lists: [
       { name: "Parents", items: ["Lit bébé", "tapis"] },
       { name: "Lily" },
     ],
   });
+const texts = (doc, list) => m.findList(doc, list).items.map((i) => i.text);
 
-test("creates an event with defaults", () => {
-  const event = createEvent();
-  assert.equal(event.title, "Mon évènement");
-  assert.equal(event.theme, "fete");
-  assert.deepEqual(event.lists, []);
+test("creates a document with defaults", () => {
+  const doc = m.createDoc();
+  assert.equal(doc.title, "Ma liste");
+  assert.equal(doc.theme, "fete");
+  assert.deepEqual(doc.pdf, m.DEFAULT_PDF);
+});
+
+test("PDF settings are kept within bounds", () => {
+  const doc = m.updateDoc(base(), {
+    pdf: { layout: "nope", blankLines: 99, orientation: "paysage" },
+  });
+  assert.deepEqual(doc.pdf, {
+    layout: "une",
+    orientation: "paysage",
+    blankLines: 8,
+    boxes: "carrees",
+  });
 });
 
 test("adding items is idempotent and creates missing lists", () => {
-  let event = addItems(base(), "lily", "doudou, pyjama");
-  event = addItems(event, "Lily", ["Doudou"]);
-  event = addItems(event, "Achille", "sac");
-  assert.deepEqual(
-    findList(event, "Lily").items.map((i) => i.text),
-    ["doudou", "pyjama"],
-  );
-  assert.equal(findList(event, "achille").items.length, 1);
+  let doc = m.addItems(base(), "lily", "doudou, pyjama");
+  doc = m.addItems(doc, "Lily", ["Doudou"]);
+  doc = m.addItems(doc, "Achille", "sac");
+  assert.deepEqual(texts(doc, "Lily"), ["doudou", "pyjama"]);
+  assert.deepEqual(texts(doc, "achille"), ["sac"]);
 });
 
-test("items are found by text, accent-insensitive, or by prefix", () => {
-  let event = toggleItem(base(), "parents", "lit bebe");
-  assert.equal(progress(event).done, 1);
-  event = toggleItem(event, "Parents", "tap");
-  assert.deepEqual(progress(event), { done: 2, total: 2 });
-  event = uncheckAll(event);
-  assert.equal(progress(event).done, 0);
-  event = removeItem(event, "Parents", "tapis");
-  assert.equal(progress(event).total, 1);
+test("items are edited, moved and removed by text", () => {
+  let doc = m.updateItem(base(), "parents", "lit bebe", "Lit parapluie");
+  doc = m.moveItem(doc, "Parents", "tap", -1);
+  assert.deepEqual(texts(doc, "Parents"), ["tapis", "Lit parapluie"]);
+  doc = m.removeItem(doc, "Parents", "tapis");
+  assert.deepEqual(texts(doc, "Parents"), ["Lit parapluie"]);
 });
 
 test("functions never change their input", () => {
-  const event = base();
-  const copy = structuredClone(event);
-  addItems(event, "Parents", "couches");
-  toggleItem(event, "Parents", "tapis");
-  assert.deepEqual(event, copy);
+  const doc = base();
+  const copy = structuredClone(doc);
+  m.addItems(doc, "Parents", "couches");
+  m.moveList(doc, "Lily", -1);
+  assert.deepEqual(doc, copy);
 });
 
 test("errors name the available lists", () => {
-  assert.throws(() => toggleItem(base(), "Mamie", "x"), /Parents.*Lily/);
-  assert.throws(() => toggleItem(base(), "Lily", "x"), /introuvable/);
+  assert.throws(() => m.removeItem(base(), "Mamie", "x"), /Parents.*Lily/);
+  assert.throws(() => m.removeItem(base(), "Lily", "x"), /introuvable/);
   assert.throws(
-    () => updateList(base(), "Lily", { name: "parents" }),
+    () => m.updateList(base(), "Lily", { name: "parents" }),
     /existe déjà/,
   );
 });
 
-test("the shared list comes first", () => {
-  let event = addList(base(), { name: "Tout le monde", items: ["jeux"] });
-  assert.equal(sortedLists(event)[0].name, "Tout le monde");
-  assert.equal(findList(event, "tous").name, "Tout le monde");
-  event = moveItem(event, "Parents", "tapis", "Tout le monde");
-  assert.deepEqual(
-    findList(event, "Tout le monde").items.map((i) => i.text),
-    ["jeux", "tapis"],
-  );
+test("the shared list comes first and uses the accent color", () => {
+  let doc = m.addList(base(), { name: "Tout le monde", items: ["jeux"] });
+  assert.equal(m.sortedLists(doc)[0].name, "Tout le monde");
+  doc = m.moveItemTo(doc, "Parents", "tapis", "tous");
+  assert.deepEqual(texts(doc, "Tout le monde"), ["jeux", "tapis"]);
+  const theme = getTheme("voyage");
+  const colors = m.listColors(doc, theme);
+  assert.equal(colors.get(m.findList(doc, "tous").id), theme.accent);
+  assert.equal(colors.get(m.findList(doc, "Parents").id), theme.people[0]);
 });
 
 test("merging a text adds to existing lists", () => {
-  const event = mergeInto(
+  const doc = m.mergeInto(
     base(),
     parseText("@theme plage\nLily 🐰 : maillot\nPapi : canne"),
   );
-  assert.equal(event.theme, "plage");
-  assert.equal(event.title, "Week-end");
-  assert.equal(findList(event, "Lily").emoji, "🐰");
-  assert.equal(findList(event, "Lily").items[0].text, "maillot");
-  assert.equal(event.lists.length, 3);
+  assert.equal(doc.theme, "plage");
+  assert.equal(doc.title, "Week-end");
+  assert.equal(m.findList(doc, "Lily").emoji, "🐰");
+  assert.equal(doc.lists.length, 3);
 });

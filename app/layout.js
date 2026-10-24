@@ -32,14 +32,6 @@ export const viewport = { themeColor: "#fff4e6" };
 export default function RootLayout({ children }) {
   return (
     <html lang="fr" className={`${titleFont.variable} ${bodyFont.variable}`}>
-      <head>
-        <link
-          rel="help"
-          type="text/plain"
-          href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/llms.txt`}
-          title="Guide pour les agents IA"
-        />
-      </head>
       <body>{children}</body>
     </html>
   );
