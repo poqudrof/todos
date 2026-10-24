@@ -28,7 +28,8 @@ test("PDF settings are kept within bounds", () => {
   assert.deepEqual(doc.pdf, {
     layout: "une",
     orientation: "paysage",
-    blankLines: 8,
+    blankLines: 10,
+    freeLines: 0,
     boxes: "carrees",
   });
 });

@@ -117,3 +117,10 @@ test("links carry the text in the hash or the query", () => {
   assert.equal(textFromUrl("https://x/#/abc"), null);
   assert.equal(docIdFromUrl("https://x/#/abc123"), "abc123");
 });
+
+test("the nameless list size survives the text format", () => {
+  const doc = docFromText("# Courses\n@libre 8\nLait, pain");
+  assert.equal(doc.pdf.freeLines, 8);
+  assert.match(docToText(doc), /^@libre 8$/m);
+  assert.equal(docFromText("# X\n@libre 99").pdf.freeLines, 20);
+});

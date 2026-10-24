@@ -48,3 +48,12 @@ test("file names are plain", () => {
     "week-end-chez-mamie.pdf",
   );
 });
+
+test("a nameless list can be added to fill in by hand", async () => {
+  const doc = docFromText(`${EXAMPLES[0].text}\n@libre 6\n@lignes 2`);
+  assert.equal(doc.pdf.freeLines, 6);
+  assert.equal(await pages(doc), 1);
+  const each = updateDoc(doc, { pdf: { layout: "chacun" } });
+  assert.equal(await pages(each), doc.lists.length + 1);
+  assert.equal(await pages(docFromText("# Vide\n@libre 10")), 1);
+});

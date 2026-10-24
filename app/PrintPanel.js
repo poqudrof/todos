@@ -32,6 +32,33 @@ function Segmented({ label, value, choices, onChange }) {
   );
 }
 
+function Stepper({ label, value, max, onChange, zero }) {
+  return (
+    <div className="setting">
+      <span className="setting-label">{label}</span>
+      <div className="stepper">
+        <button
+          type="button"
+          aria-label={`${label} : moins`}
+          disabled={value <= 0}
+          onClick={() => onChange(value - 1)}
+        >
+          −
+        </button>
+        <span aria-live="polite">{value === 0 && zero ? zero : value}</span>
+        <button
+          type="button"
+          aria-label={`${label} : plus`}
+          disabled={value >= max}
+          onClick={() => onChange(value + 1)}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // PDF settings, a live preview and the download button.
 export default function PrintPanel({ doc, act, notify }) {
   const [preview, setPreview] = useState(null);
@@ -107,7 +134,7 @@ export default function PrintPanel({ doc, act, notify }) {
             ))}
           </div>
         </div>
-        {doc.lists.length > 1 && (
+        {doc.lists.length + (pdf.freeLines ? 1 : 0) > 1 && (
           <Segmented
             label="Mise en page"
             value={pdf.layout}
@@ -134,28 +161,25 @@ export default function PrintPanel({ doc, act, notify }) {
             ]}
             onChange={(boxes) => setPdf({ boxes })}
           />
-          <div className="setting">
-            <span className="setting-label">Lignes à remplir</span>
-            <div className="stepper">
-              <button
-                type="button"
-                aria-label="Moins de lignes"
-                disabled={pdf.blankLines <= 0}
-                onClick={() => setPdf({ blankLines: pdf.blankLines - 1 })}
-              >
-                −
-              </button>
-              <span aria-live="polite">{pdf.blankLines}</span>
-              <button
-                type="button"
-                aria-label="Plus de lignes"
-                disabled={pdf.blankLines >= 8}
-                onClick={() => setPdf({ blankLines: pdf.blankLines + 1 })}
-              >
-                +
-              </button>
-            </div>
-          </div>
+        </div>
+        <div className="setting-row">
+          <Stepper
+            label={
+              doc.lists.length > 1
+                ? "Lignes libres pour chacun"
+                : "Lignes libres en plus"
+            }
+            value={pdf.blankLines}
+            max={model.MAX_BLANK_LINES}
+            onChange={(blankLines) => setPdf({ blankLines })}
+          />
+          <Stepper
+            label="Liste sans nom, à remplir"
+            value={pdf.freeLines}
+            max={model.MAX_FREE_LINES}
+            zero="Non"
+            onChange={(freeLines) => setPdf({ freeLines })}
+          />
         </div>
       </div>
 

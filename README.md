@@ -8,7 +8,8 @@ Tout se passe dans le navigateur : pas de compte, pas de serveur. Chaque modific
 
 - Décors : Fête, Voyage, Plage, Jardin, Hiver, Douceur (guirlande de fanions) et Classique (double cadre fin).
 - Mise en page : tout sur une page (cartes en colonnes, liste « Tout le monde » en tête), une page par liste (gros texte, pour la chambre de chacun), ou les deux.
-- Portrait ou paysage, cases carrées ou rondes, 0 à 8 lignes vides par liste pour écrire à la main.
+- Portrait ou paysage, cases carrées ou rondes.
+- À écrire au stylo : 0 à 10 lignes libres en plus dans chaque liste, et une liste sans nom de 0 à 20 lignes (un rond pour des initiales, une ligne pour le nom), en bas de la page ou sur sa propre page.
 - La taille du texte s’ajuste pour remplir la page sans couper les mots ; une liste trop longue continue sur une page suivante.
 - Emojis en couleur (dessinés par le système), polices Fredoka et Nunito intégrées.
 
@@ -26,7 +27,8 @@ Le bouton ✍️ Texte et le champ « Nouvelle liste » acceptent :
 @theme voyage
 @pages une            (une | chacun | les-deux)
 @orientation portrait (portrait | paysage)
-@lignes 2
+@lignes 2             (lignes libres en plus dans chaque liste)
+@libre 6              (liste sans nom de 6 lignes)
 @cases carrees        (carrees | rondes)
 
 Parents : Lit bébé, tapis, habits, couches, trousse de toilette

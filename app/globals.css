@@ -803,6 +803,7 @@ h2 .editable-input {
 
 .stepper {
   display: inline-flex;
+  justify-self: start;
   align-items: center;
   gap: 6px;
   background: var(--soft);
@@ -818,7 +819,7 @@ h2 .editable-input {
 }
 
 .stepper span {
-  min-width: 18px;
+  min-width: 28px;
   text-align: center;
   font-weight: 800;
 }
